@@ -29,6 +29,7 @@ import org.apache.flume.Event;
 import org.apache.flume.sink.elasticsearch.ElasticSearchEventSerializer;
 import org.apache.flume.sink.elasticsearch.ElasticSearchIndexRequestBuilderFactory;
 import org.apache.flume.sink.elasticsearch.IndexNameBuilder;
+import org.apache.flume.sink.elasticsearch.JacksonUtil;
 import org.apache.http.HttpHost;
 import org.elasticsearch.action.bulk.BulkRequest;
 import org.elasticsearch.action.bulk.BulkResponse;
@@ -42,6 +43,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Charsets;
 
 public class ElasticSearchTransportClient implements ElasticSearchClient {
 
@@ -150,8 +152,9 @@ public class ElasticSearchTransportClient implements ElasticSearchClient {
     if (bulkRequestBuilder == null) {
 	    bulkRequestBuilder = new BulkRequest();
     }
-	    IndexRequest request = new IndexRequest(indexNameBuilder.getIndexName(event));
-      request.source(event.getBody(), XContentType.JSON);
+        IndexRequest request = new IndexRequest(indexNameBuilder.getIndexName(event), indexType);
+        String content = JacksonUtil.toJsonString(new SourceContent(new String(event.getBody(), Charsets.UTF_8)));
+        request.source(content, XContentType.JSON);
       bulkRequestBuilder.add(request);
   }
 
@@ -163,6 +166,21 @@ public class ElasticSearchTransportClient implements ElasticSearchClient {
       bulkRequestBuilder = new BulkRequest();
     }
   }
+
+    private class SourceContent
+    {
+        private final String raw;
+
+        public SourceContent(String raw)
+        {
+            this.raw = raw;
+        }
+
+        public String getRaw()
+        {
+            return raw;
+        }
+    }
 
   /**
    * Open client to elaticsearch cluster
