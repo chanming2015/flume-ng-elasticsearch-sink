@@ -29,11 +29,6 @@ import org.apache.flume.sink.elasticsearch.IndexNameBuilder;
 public interface ElasticSearchClient extends Configurable {
 
   /**
-   * Close connection to elastic search in client
-   */
-  void close();
-
-  /**
    * Add new event to the bulk
    *
    * @param event

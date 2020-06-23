@@ -21,7 +21,6 @@ package org.apache.flume.sink.elasticsearch;
 import java.io.IOException;
 import java.nio.charset.Charset;
 
-
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.common.xcontent.XContentParser;
@@ -65,11 +64,11 @@ public class ContentBuilderUtil {
       // elasticsearch.
       // If validation fails then the incoming event is submitted to
       // elasticsearch as plain text.
-      parser = XContentFactory.xContent(contentType).createParser(null, null, data);
+      parser = XContentFactory.xContent(contentType).createParser(null, data);
       while (parser.nextToken() != null) {};
 
       // If the JSON is valid then include it
-      parser = XContentFactory.xContent(contentType).createParser(null, null, data);
+      parser = XContentFactory.xContent(contentType).createParser(null, data);
       // Add the field name, but not the value.
       builder.field(fieldName);
       // This will add the whole parsed content as the value of the field.

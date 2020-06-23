@@ -18,8 +18,10 @@
  */
 package org.apache.flume.sink.elasticsearch.client;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.gson.Gson;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
+
 import org.apache.flume.Context;
 import org.apache.flume.Event;
 import org.apache.flume.EventDeliveryException;
@@ -36,9 +38,8 @@ import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
+import com.google.common.annotations.VisibleForTesting;
+import com.google.gson.Gson;
 
 /**
  * Rest ElasticSearch client which is responsible for sending bulks of events to
@@ -71,7 +72,7 @@ public class  ElasticSearchRestClient implements ElasticSearchClient {
     }
     this.serializer = serializer;
 
-    serversList = new RoundRobinList<String>(Arrays.asList(hostNames));
+    serversList = new RoundRobinList<>(Arrays.asList(hostNames));
     httpClient = new DefaultHttpClient();
     bulkBuilder = new StringBuilder();
   }
@@ -88,16 +89,12 @@ public class  ElasticSearchRestClient implements ElasticSearchClient {
   }
 
   @Override
-  public void close() {
-  }
-
-  @Override
   public void addEvent(Event event, IndexNameBuilder indexNameBuilder, String indexType,
                        long ttlMs) throws Exception {
 //    BytesReference content = serializer.getContentBuilder(event).bytes();
 	XContentBuilder content = serializer.getContentBuilder(event);
-    Map<String, Map<String, String>> parameters = new HashMap<String, Map<String, String>>();
-    Map<String, String> indexParameters = new HashMap<String, String>();
+    Map<String, Map<String, String>> parameters = new HashMap<>();
+    Map<String, String> indexParameters = new HashMap<>();
     indexParameters.put(INDEX_PARAM, indexNameBuilder.getIndexName(event));
     indexParameters.put(TYPE_PARAM, indexType);
     if (ttlMs > 0) {

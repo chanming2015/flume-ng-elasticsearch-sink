@@ -18,32 +18,30 @@
  */
 package org.apache.flume.sink.elasticsearch.client;
 
-import com.google.common.annotations.VisibleForTesting;
+import static org.apache.flume.sink.elasticsearch.ElasticSearchSinkConstants.DEFAULT_PORT;
+
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.net.InetSocketAddress;
+import java.util.Arrays;
 
 import org.apache.flume.Context;
 import org.apache.flume.Event;
 import org.apache.flume.sink.elasticsearch.ElasticSearchEventSerializer;
+import org.apache.flume.sink.elasticsearch.ElasticSearchIndexRequestBuilderFactory;
 import org.apache.flume.sink.elasticsearch.IndexNameBuilder;
 import org.apache.http.HttpHost;
 import org.elasticsearch.action.bulk.BulkRequest;
 import org.elasticsearch.action.bulk.BulkResponse;
 import org.elasticsearch.action.index.IndexRequest;
-import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.client.RestClient;
 import org.elasticsearch.client.RestHighLevelClient;
-import org.elasticsearch.common.bytes.BytesReference;
+import org.elasticsearch.common.transport.InetSocketTransportAddress;
 import org.elasticsearch.common.transport.TransportAddress;
 import org.elasticsearch.common.xcontent.XContentType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Arrays;
-import org.apache.flume.sink.elasticsearch.ElasticSearchIndexRequestBuilderFactory;
-
-import static org.apache.flume.sink.elasticsearch.ElasticSearchSinkConstants.DEFAULT_PORT;
+import com.google.common.annotations.VisibleForTesting;
 
 public class ElasticSearchTransportClient implements ElasticSearchClient {
 
@@ -142,22 +140,10 @@ public class ElasticSearchTransportClient implements ElasticSearchClient {
       String host = hostPort[0].trim();
       int port = hostPort.length == 2 ? Integer.parseInt(hostPort[1].trim())
               : DEFAULT_PORT;
-      serverAddresses[i] = new TransportAddress(new InetSocketAddress(host, port));
+            serverAddresses[i] = new InetSocketTransportAddress(new InetSocketAddress(host, port));
     }
   }
   
-  @Override
-  public void close() {
-    if (client != null) {
-      try {
-		client.close();
-	} catch (IOException e) {
-		e.printStackTrace();
-	}
-    }
-    client = null;
-  }
-
   @Override
   public void addEvent(Event event, IndexNameBuilder indexNameBuilder,
       String indexType, long ttlMs) throws Exception {
@@ -172,7 +158,7 @@ public class ElasticSearchTransportClient implements ElasticSearchClient {
   @Override
   public void execute() throws Exception {
     try {
-     BulkResponse response = client.bulk(bulkRequestBuilder, RequestOptions.DEFAULT);
+            BulkResponse response = client.bulk(bulkRequestBuilder);
     } finally {
       bulkRequestBuilder = new BulkRequest();
     }
@@ -194,14 +180,7 @@ public class ElasticSearchTransportClient implements ElasticSearchClient {
     	hosts[i] = new HttpHost(host.getAddress(), host.getPort(), "http");
     }
     RestHighLevelClient transportClient = new RestHighLevelClient(
-    		RestClient.builder(hosts));
-    if (client != null) {
-      try {
-		client.close();
-	} catch (IOException e) {
-		e.printStackTrace();
-	}
-    }
+                RestClient.builder(hosts).build());
     client = transportClient;
   }
 
