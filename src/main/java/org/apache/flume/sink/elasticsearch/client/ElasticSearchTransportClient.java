@@ -22,14 +22,17 @@ import static org.apache.flume.sink.elasticsearch.ElasticSearchSinkConstants.DEF
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
+import java.util.Date;
 
 import org.apache.flume.Context;
 import org.apache.flume.Event;
 import org.apache.flume.sink.elasticsearch.ElasticSearchEventSerializer;
 import org.apache.flume.sink.elasticsearch.ElasticSearchIndexRequestBuilderFactory;
 import org.apache.flume.sink.elasticsearch.IndexNameBuilder;
-import org.apache.flume.sink.elasticsearch.JacksonUtil;
 import org.apache.http.HttpHost;
 import org.elasticsearch.action.bulk.BulkRequest;
 import org.elasticsearch.action.bulk.BulkResponse;
@@ -42,6 +45,7 @@ import org.elasticsearch.common.xcontent.XContentType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.alibaba.fastjson.JSONObject;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Charsets;
 
@@ -153,7 +157,7 @@ public class ElasticSearchTransportClient implements ElasticSearchClient {
 	    bulkRequestBuilder = new BulkRequest();
     }
         IndexRequest request = new IndexRequest(indexNameBuilder.getIndexName(event), indexType);
-        String content = JacksonUtil.toJsonString(new SourceContent(new String(event.getBody(), Charsets.UTF_8)));
+        String content = new SourceContent(event).toString();
         request.source(content, XContentType.JSON);
       bulkRequestBuilder.add(request);
   }
@@ -167,18 +171,47 @@ public class ElasticSearchTransportClient implements ElasticSearchClient {
     }
   }
 
+    private static final ZoneId zone = ZoneId.of("+08:00");
+
+    private static LocalDateTime parseLocalDateTime(long time)
+    {
+        return LocalDateTime.ofInstant(new Date(time).toInstant(), zone);
+    }
+
     private class SourceContent
     {
+        private final String hostname;
+        private final String date;
         private final String raw;
 
-        public SourceContent(String raw)
+        public SourceContent(Event event)
         {
-            this.raw = raw;
+            String hn = "none-hostname";
+            long timestamp = System.currentTimeMillis();
+            if (event.getHeaders() != null)
+            {
+                if (event.getHeaders().get("host") != null)
+                {
+                    hn = event.getHeaders().get("host");
+                }
+                if (event.getHeaders().get("timestamp") != null)
+                {
+                    timestamp = Long.valueOf(event.getHeaders().get("timestamp")).longValue();
+                }
+            }
+            hostname = hn;
+            date = String.format("%s%s", parseLocalDateTime(timestamp).format(DateTimeFormatter.ISO_LOCAL_DATE_TIME), zone.getId());
+            this.raw = String.format("%s %s %s", date, hostname, new String(event.getBody(), Charsets.UTF_8));
         }
 
-        public String getRaw()
+        @Override
+        public String toString()
         {
-            return raw;
+            JSONObject jsob = new JSONObject(4);
+            jsob.put("hostname", hostname);
+            jsob.put("@timestamp", date);
+            jsob.put("raw", raw);
+            return jsob.toJSONString();
         }
     }
 
